@@ -6,8 +6,9 @@ package main
 
 import (
 	"flag"
-	"log"
+	"fmt"
 	"net/http"
+	"os"
 	"text/template"
 )
 
@@ -30,10 +31,27 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 func main() {
 	flag.Parse()
 	go h.run()
-	http.HandleFunc("/", serveHome)
-	http.HandleFunc("/ws", serveWs)
-	err := http.ListenAndServe(*addr, nil)
+
+	host, port := os.Getenv("HOST"), os.Getenv("PORT")
+	if port == "" {
+		port = "2015"
+	}
+	httpMux, wsMux := http.NewServeMux(), http.NewServeMux()
+	httpMux.HandleFunc("/", serveHome)
+	wsMux.HandleFunc("/ws", serveWs)
+
+	// open shift requires web sockets to be on this port
+	wsPort := "8000"
+	bind := fmt.Sprintf("%s:%s", host, port)
+	wsBind := fmt.Sprintf("%s:%s", host, wsPort)
+
+	go func() {
+		fmt.Printf("Listening on %s\n", wsBind)
+		http.ListenAndServe(wsBind, wsMux)
+	}()
+
+	err := http.ListenAndServe(bind, httpMux)
 	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+		panic("ListenAndServe:" + err.Error())
 	}
 }
