@@ -36,19 +36,11 @@ func main() {
 	if port == "" {
 		port = "2015"
 	}
-	httpMux, wsMux := http.NewServeMux(), http.NewServeMux()
+	httpMux := http.NewServeMux()
 	httpMux.HandleFunc("/", serveHome)
-	wsMux.HandleFunc("/ws", serveWs)
+	httpMux.HandleFunc("/ws", serveWs)
 
-	// open shift requires web sockets to be on this port
-	wsPort := "8000"
 	bind := fmt.Sprintf("%s:%s", host, port)
-	wsBind := fmt.Sprintf("%s:%s", host, wsPort)
-
-	go func() {
-		fmt.Printf("Listening on %s\n", wsBind)
-		http.ListenAndServe(wsBind, wsMux)
-	}()
 
 	err := http.ListenAndServe(bind, httpMux)
 	if err != nil {
